@@ -1,3 +1,3 @@
-# entity-extraction
+# article-entities
 
-See the [component page](http://peerj.github.io/entity-extraction) for more information.
+See the [component page](http://peerj.github.io/article-entities) for more information.
