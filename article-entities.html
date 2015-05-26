@@ -18,6 +18,17 @@ Element adding links from detected entities.
 @homepage https://github.com/peerj/article-entities/
 -->
 <polymer-element name="article-entities">
+  <template>
+    <style>
+    :host {
+      width: 275px;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    </style>
+    <div id="infobox"></div>
+  </template>
+
   <script>
     Polymer({
       attached: function() {
@@ -29,14 +40,17 @@ Element adding links from detected entities.
        * Add a link to Wikipedia for each species name.
        */
       detectSpecies: function() {
+        var infobox = $(this.$.infobox);
+        var infoboxes = {};
+
         $('article section p').each(function() {
           $('i, em', this).each(function() {
             var node = $(this);
 
             // exclude if already inside a link
-            if (node.parent('a').length) {
-              return;
-            }
+            //if (node.parent('a').length) {
+              //return;
+            //}
 
             var text = $.trim(node.text());
 
@@ -49,9 +63,54 @@ Element adding links from detected entities.
               return;
             }
 
-            var url = 'https://en.wikipedia.org/wiki/Special:Search?' + $.param({ search: text });
-            var link = $('<a/>', { target: '_blank', href: url });
-            node.wrap(link);
+            node.css('cursor', 'pointer').on('click', function() {
+              var url = 'https://en.wikipedia.org/wiki/Special:Search?' + $.param({ search: text });
+              window.open(url);
+              return false;
+            }).hover(function() {
+              node.css('background-color', 'yellow');
+
+              var data = infoboxes[text];
+
+              if (data) {
+                infobox.html(data);
+                return;
+              }
+
+              infoboxes[text] = false;
+              infobox.text(text + '…');
+
+              $.ajax({
+                dataType: 'jsonp',
+                url: 'https://en.wikipedia.org/w/api.php',
+                data: {
+                  action: 'query',
+                  prop: 'revisions',
+                  rvprop: 'content',
+                  format: 'json',
+                  rvsection: '0',
+                  rvparse: '',
+                  redirects: '',
+                  titles: text
+                },
+                success: function(data) {
+                  var keys = Object.keys(data.query.pages);
+                  var content = data.query.pages[keys[0]].revisions[0]['*'];
+
+                  var data = $('.infobox', content).get(0);
+                  infoboxes[text] = data;
+                  infobox.html(data);
+                },
+                error: function() {
+                  infoboxes[text] = false;
+                  infobox.empty();
+                }
+              });
+            }, function() {
+              // TODO: cancel loading previous infobox
+
+              node.css('background-color', 'white');
+            });
           });
         });
       }
